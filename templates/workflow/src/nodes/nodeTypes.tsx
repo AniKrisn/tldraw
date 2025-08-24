@@ -7,6 +7,7 @@ import {
 import { PortId, ShapePort } from '../ports/Port'
 import { NodeShape } from './NodeShapeUtil'
 import { AddNode } from './types/AddNode'
+import { MajorChordSliderNode } from './types/audio/MajorChordSlider'
 import { OscillatorNode } from './types/audio/OscillatorNode'
 import { ConditionalNode } from './types/ConditionalNode'
 import { DivideNode } from './types/DivideNode'
@@ -25,6 +26,7 @@ export const NodeDefinitions = [
 	SliderNode,
 	// Audio Nodes
 	OscillatorNode,
+	MajorChordSliderNode,
 ] as const
 
 const NodeDefinitionMap = Object.fromEntries(NodeDefinitions.map((type) => [type.type, type])) as {
