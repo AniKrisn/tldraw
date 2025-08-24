@@ -30,16 +30,16 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 	getBodyHeightPx: () => NODE_ROW_HEIGHT_PX * 3,
 
 	getPorts: () => ({
-		audioOut: {
-			id: 'audioOut',
-			x: 200,
-			y: NODE_HEADER_HEIGHT_PX / 2,
-			terminal: 'start',
-		},
+		// audioOut: {
+		// 	id: 'audioOut',
+		// 	x: 250,
+		// 	y: NODE_HEADER_HEIGHT_PX / 2,
+		// 	terminal: 'start',
+		// },
 		freqIn: {
 			id: 'freqIn',
 			x: 0,
-			y: NODE_HEADER_HEIGHT_PX + NODE_ROW_HEIGHT_PX / 2,
+			y: NODE_HEADER_HEIGHT_PX + NODE_ROW_HEIGHT_PX / 2 + 4,
 			terminal: 'end',
 		},
 	}),
@@ -69,6 +69,14 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 			}
 		}, [effectiveFrequency, node.isPlaying, shape.id])
 
+		// Update oscillator when waveform changes and it's playing
+		React.useEffect(() => {
+			if (node.isPlaying) {
+				console.log('🎵 Waveform changed to:', node.waveform)
+				updateOscillatorParams(shape.id, { waveform: node.waveform })
+			}
+		}, [node.waveform, node.isPlaying, shape.id])
+
 		console.log('🎵 OscillatorNode component rendering, node:', node)
 
 		const handleFrequencyChange = (newFrequency: number) => {
@@ -88,7 +96,10 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 				waveform,
 			}))
 
-			updateOscillatorParams(shape.id, { waveform })
+			// Update immediately if playing
+			if (node.isPlaying) {
+				updateOscillatorParams(shape.id, { waveform })
+			}
 		}
 
 		const handlePlayToggle = async () => {
@@ -104,7 +115,12 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 
 			if (newPlaying) {
 				console.log('🎵 Starting oscillator...')
-				await startOscillator(shape.id, node)
+				// Use the effective frequency (from input or node) when starting
+				const nodeDataWithEffectiveFreq = {
+					...node,
+					frequency: effectiveFrequency as number,
+				}
+				await startOscillator(shape.id, nodeDataWithEffectiveFreq)
 			} else {
 				console.log('🎵 Stopping oscillator...')
 				stopOscillator(shape.id)
@@ -123,7 +139,6 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 				/>
 
 				<NodeRow className="NodeRow">
-					<span>Wave:</span>
 					<select
 						value={node.waveform}
 						onChange={(e) => handleWaveformChange(e.target.value as OscillatorNodeType['waveform'])}
@@ -150,7 +165,8 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 							e.preventDefault()
 						}}
 						style={{
-							padding: '4px 8px',
+							width: '100%',
+							padding: '8px',
 							backgroundColor: node.isPlaying ? '#ff6b6b' : '#4caf50',
 							color: 'white',
 							border: 'none',
@@ -158,10 +174,14 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 							cursor: 'pointer',
 							position: 'relative',
 							zIndex: 1000,
-							pointerEvents: 'auto', // Explicitly enable pointer events
+							pointerEvents: 'auto',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							fontSize: '16px',
 						}}
 					>
-						{node.isPlaying ? '⏹ Stop' : '▶ Play'}
+						{node.isPlaying ? '⏹' : '▶'}
 					</button>
 				</NodeRow>
 			</>
@@ -251,5 +271,11 @@ async function updateOscillatorParams(
 	// For waveform changes, we need to restart the oscillator
 	if (params.waveform !== undefined) {
 		console.log('🎵 Waveform change requires restart')
+		try {
+			oscillator.type = params.waveform
+			console.log('🎵 Waveform updated successfully to:', params.waveform)
+		} catch (error) {
+			console.error('🎵 Error updating waveform:', error)
+		}
 	}
 }

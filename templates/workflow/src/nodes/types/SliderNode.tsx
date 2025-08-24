@@ -19,7 +19,7 @@ export const SliderNode: NodeDefinition<SliderNode> = {
 	icon: <SliderIcon />,
 	getDefault: () => ({
 		type: 'slider',
-		value: 200,
+		value: 440,
 	}),
 	getBodyHeightPx: () => NODE_ROW_HEIGHT_PX,
 	getPorts: () => ({
@@ -33,7 +33,7 @@ export const SliderNode: NodeDefinition<SliderNode> = {
 		return (
 			<NodeRow className="SliderNode" onPointerDown={stopEventPropagation}>
 				<TldrawUiSlider
-					steps={1000}
+					steps={2000}
 					value={node.value}
 					label="Slider"
 					title="Slider"
