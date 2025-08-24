@@ -32,6 +32,7 @@ import {
 } from 'tldraw'
 import { NodeShape } from '../nodes/NodeShapeUtil'
 import { NodeDefinitions, NodeType } from '../nodes/nodeTypes'
+import { AudioToolbarItem } from './AudioToolbarItem'
 import { MATH_MENU_ID, MathematicalToolbarItem } from './MathematicalToolbarItem'
 
 function createNodeShape(editor: Editor, shapeId: TLShapeId, center: Vec, node: NodeType) {
@@ -112,6 +113,10 @@ export function WorkflowToolbar() {
 				<MathematicalToolbarItem />
 				<ToolbarItem tool="node-slider" />
 				<ToolbarItem tool="node-conditional" />
+			</TldrawUiMenuGroup>
+
+			<TldrawUiMenuGroup id="audio">
+				<AudioToolbarItem />
 			</TldrawUiMenuGroup>
 
 			<TldrawUiMenuGroup id="shapes">
