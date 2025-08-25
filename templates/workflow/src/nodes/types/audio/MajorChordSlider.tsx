@@ -1,39 +1,55 @@
+import React, { useCallback, useRef, useState } from 'react'
 import { stopEventPropagation, T, TldrawUiSlider, useEditor } from 'tldraw'
 import { MajorChordIcon } from '../../../components/icons/MajorChordIcon'
 import { NODE_ROW_HEIGHT_PX } from '../../../constants'
 import { NodeDefinition, NodeRow, outputPort, updateNode } from '../shared'
 
-// B major scale intervals (all 7 notes)
-const B_MAJOR_SCALE = [
-	{ semitones: 0, name: 'B' }, // B (root)
-	{ semitones: 2, name: 'C#' }, // C# (major 2nd)
-	{ semitones: 4, name: 'D#' }, // D# (major 3rd)
-	{ semitones: 5, name: 'E' }, // E (perfect 4th)
-	{ semitones: 7, name: 'F#' }, // F# (perfect 5th)
-	{ semitones: 9, name: 'G#' }, // G# (major 6th)
-	{ semitones: 11, name: 'A#' }, // A# (major 7th)
+// Major scale intervals (all 7 notes)
+const MAJOR_SCALE_INTERVALS = [
+	{ semitones: 0, degree: 1 }, // Root
+	{ semitones: 2, degree: 2 }, // Major 2nd
+	{ semitones: 4, degree: 3 }, // Major 3rd
+	{ semitones: 5, degree: 4 }, // Perfect 4th
+	{ semitones: 7, degree: 5 }, // Perfect 5th
+	{ semitones: 9, degree: 6 }, // Major 6th
+	{ semitones: 11, degree: 7 }, // Major 7th
 ] as const
 
-// Base frequency for B4 (493.88 Hz)
-const B4_FREQUENCY = 493.88
+// All 12 keys with their root frequencies at octave 4
+const KEY_DEFINITIONS = [
+	{ key: 'C', rootFreq: 261.63, noteNames: ['C', 'D', 'E', 'F', 'G', 'A', 'B'] },
+	{ key: 'C#', rootFreq: 277.18, noteNames: ['C#', 'D#', 'F', 'F#', 'G#', 'A#', 'C'] },
+	{ key: 'D', rootFreq: 293.66, noteNames: ['D', 'E', 'F#', 'G', 'A', 'B', 'C#'] },
+	{ key: 'D#', rootFreq: 311.13, noteNames: ['D#', 'F', 'G', 'G#', 'A#', 'C', 'D'] },
+	{ key: 'E', rootFreq: 329.63, noteNames: ['E', 'F#', 'G#', 'A', 'B', 'C#', 'D#'] },
+	{ key: 'F', rootFreq: 349.23, noteNames: ['F', 'G', 'A', 'A#', 'C', 'D', 'E'] },
+	{ key: 'F#', rootFreq: 369.99, noteNames: ['F#', 'G#', 'A#', 'B', 'C#', 'D#', 'F'] },
+	{ key: 'G', rootFreq: 392.0, noteNames: ['G', 'A', 'B', 'C', 'D', 'E', 'F#'] },
+	{ key: 'G#', rootFreq: 415.3, noteNames: ['G#', 'A#', 'C', 'C#', 'D#', 'F', 'G'] },
+	{ key: 'A', rootFreq: 440.0, noteNames: ['A', 'B', 'C#', 'D', 'E', 'F#', 'G#'] },
+	{ key: 'A#', rootFreq: 466.16, noteNames: ['A#', 'C', 'D', 'D#', 'F', 'G', 'A'] },
+	{ key: 'B', rootFreq: 493.88, noteNames: ['B', 'C#', 'D#', 'E', 'F#', 'G#', 'A#'] },
+] as const
 
-// Generate B major scale frequencies across multiple octaves
-function generateBMajorScaleFrequencies(): { frequency: number; name: string }[] {
+// Generate major scale frequencies for a given key across multiple octaves
+function generateMajorScaleFrequencies(keyIndex: number): { frequency: number; name: string }[] {
+	const keyDef = KEY_DEFINITIONS[keyIndex]
 	const frequencies = []
 
-	// Generate frequencies across 4 octaves (B2 to B6)
+	// Generate frequencies across 4 octaves (octave 2 to 6)
 	for (let octave = -2; octave <= 2; octave++) {
 		const octaveMultiplier = Math.pow(2, octave)
-		for (const note of B_MAJOR_SCALE) {
+		for (let i = 0; i < MAJOR_SCALE_INTERVALS.length; i++) {
+			const interval = MAJOR_SCALE_INTERVALS[i]
 			// Calculate frequency using equal temperament: f = base * 2^(semitones/12)
-			const semitoneMultiplier = Math.pow(2, note.semitones / 12)
-			const frequency = B4_FREQUENCY * octaveMultiplier * semitoneMultiplier
+			const semitoneMultiplier = Math.pow(2, interval.semitones / 12)
+			const frequency = keyDef.rootFreq * octaveMultiplier * semitoneMultiplier
 
 			// Only include frequencies within reasonable range
 			if (frequency >= 55 && frequency <= 3520) {
 				frequencies.push({
 					frequency: Math.round(frequency * 100) / 100, // Round to 2 decimal places
-					name: `${note.name}${4 + octave}`, // Standard note notation (e.g., B4, C#5)
+					name: `${keyDef.noteNames[i]}${4 + octave}`, // Standard note notation (e.g., B4, C#5)
 				})
 			}
 		}
@@ -42,20 +58,205 @@ function generateBMajorScaleFrequencies(): { frequency: number; name: string }[]
 	return frequencies.sort((a, b) => a.frequency - b.frequency)
 }
 
-const B_MAJOR_FREQUENCIES = generateBMajorScaleFrequencies()
+// Cache for scale frequencies by key
+const scaleFrequencyCache = new Map<number, { frequency: number; name: string }[]>()
 
-// Find the closest B major scale frequency to a given value
-function snapToBMajorScale(value: number): number {
-	const closest = B_MAJOR_FREQUENCIES.reduce((prev, curr) =>
+// Get scale frequencies for a key (with caching)
+function getScaleFrequencies(keyIndex: number): { frequency: number; name: string }[] {
+	if (!scaleFrequencyCache.has(keyIndex)) {
+		scaleFrequencyCache.set(keyIndex, generateMajorScaleFrequencies(keyIndex))
+	}
+	return scaleFrequencyCache.get(keyIndex)!
+}
+
+// Find the closest major scale frequency to a given value for a specific key
+function snapToMajorScale(value: number, keyIndex: number): number {
+	const frequencies = getScaleFrequencies(keyIndex)
+	const closest = frequencies.reduce((prev, curr) =>
 		Math.abs(curr.frequency - value) < Math.abs(prev.frequency - value) ? curr : prev
 	)
 	return closest.frequency
 }
 
-// Get the note name for a given frequency
-function getNoteName(frequency: number): string {
-	const match = B_MAJOR_FREQUENCIES.find((f) => Math.abs(f.frequency - frequency) < 0.01)
+// Get the note name for a given frequency in a specific key
+function getNoteName(frequency: number, keyIndex: number): string {
+	const frequencies = getScaleFrequencies(keyIndex)
+	const match = frequencies.find((f) => Math.abs(f.frequency - frequency) < 0.01)
 	return match ? match.name : '?'
+}
+
+// Circular Slider Component for Key Selection
+interface CircularSliderProps {
+	value: number // 0-11 for the 12 keys
+	onValueChange: (value: number) => void
+	size?: number
+}
+
+const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, size = 60 }) => {
+	const [isDragging, setIsDragging] = useState(false)
+	const sliderRef = useRef<SVGSVGElement>(null)
+
+	const radius = (size - 20) / 2
+	const centerX = size / 2
+	const centerY = size / 2
+
+	// Calculate angle from value (0-11 maps to 0-330 degrees, starting from top)
+	const angleFromValue = (val: number) => val * 30 - 90 // -90 to start from top
+
+	// Calculate value from angle
+	const valueFromAngle = (angle: number) => {
+		// Normalize angle to 0-360, starting from top
+		let normalizedAngle = (angle + 90) % 360
+		if (normalizedAngle < 0) normalizedAngle += 360
+		return Math.round(normalizedAngle / 30) % 12
+	}
+
+	// Get angle from mouse position
+	const getAngleFromEvent = useCallback((event: React.MouseEvent | MouseEvent) => {
+		if (!sliderRef.current) return 0
+
+		const rect = sliderRef.current.getBoundingClientRect()
+		const centerX = rect.left + rect.width / 2
+		const centerY = rect.top + rect.height / 2
+
+		const deltaX = event.clientX - centerX
+		const deltaY = event.clientY - centerY
+
+		return Math.atan2(deltaY, deltaX) * (180 / Math.PI)
+	}, [])
+
+	const handleMouseDown = useCallback(
+		(event: React.MouseEvent) => {
+			event.preventDefault()
+			event.stopPropagation()
+			setIsDragging(true)
+
+			const angle = getAngleFromEvent(event)
+			const newValue = valueFromAngle(angle)
+			onValueChange(newValue)
+		},
+		[getAngleFromEvent, onValueChange, value]
+	)
+
+	const handleMouseMove = useCallback(
+		(event: MouseEvent) => {
+			if (!isDragging) return
+
+			const angle = getAngleFromEvent(event)
+			const newValue = valueFromAngle(angle)
+			onValueChange(newValue)
+		},
+		[isDragging, getAngleFromEvent, onValueChange]
+	)
+
+	const handleMouseUp = useCallback(() => {
+		setIsDragging(false)
+	}, [])
+
+	// Add/remove global mouse listeners
+	React.useEffect(() => {
+		if (isDragging) {
+			document.addEventListener('mousemove', handleMouseMove)
+			document.addEventListener('mouseup', handleMouseUp)
+			return () => {
+				document.removeEventListener('mousemove', handleMouseMove)
+				document.removeEventListener('mouseup', handleMouseUp)
+			}
+		}
+	}, [isDragging, handleMouseMove, handleMouseUp])
+
+	// Calculate thumb position
+	const angle = angleFromValue(value)
+	const thumbX = centerX + radius * Math.cos((angle * Math.PI) / 180)
+	const thumbY = centerY + radius * Math.sin((angle * Math.PI) / 180)
+
+	// Create key labels around the circle
+	const keyLabels = KEY_DEFINITIONS.map((keyDef, index) => {
+		const labelAngle = angleFromValue(index)
+		const labelRadius = radius + 15
+		const labelX = centerX + labelRadius * Math.cos((labelAngle * Math.PI) / 180)
+		const labelY = centerY + labelRadius * Math.sin((labelAngle * Math.PI) / 180)
+
+		return (
+			<text
+				key={index}
+				x={labelX}
+				y={labelY}
+				textAnchor="middle"
+				dominantBaseline="central"
+				fontSize="10"
+				fill={index === value ? '#0066ff' : '#666'}
+				fontWeight={index === value ? 'bold' : 'normal'}
+			>
+				{keyDef.key}
+			</text>
+		)
+	})
+
+	return (
+		<div
+			style={{
+				display: 'flex',
+				justifyContent: 'center',
+				alignItems: 'center',
+				height: size + 30,
+				position: 'relative',
+				zIndex: 10,
+				pointerEvents: 'all',
+			}}
+		>
+			<svg
+				ref={sliderRef}
+				width={size + 30}
+				height={size + 30}
+				style={{
+					zIndex: 10,
+					position: 'relative',
+					pointerEvents: 'none', // Disable events on the entire SVG
+				}}
+			>
+				{/* Track circle - interactive */}
+				<circle
+					cx={centerX + 15}
+					cy={centerY + 15}
+					r={radius}
+					fill="none"
+					stroke="#ddd"
+					strokeWidth="8" // Wider stroke for easier clicking
+					style={{
+						pointerEvents: 'all',
+						cursor: isDragging ? 'grabbing' : 'grab',
+					}}
+					onMouseDown={handleMouseDown}
+				/>
+
+				{/* Key labels - non-interactive */}
+				{keyLabels.map((label, index) =>
+					React.cloneElement(label, {
+						key: index,
+						x: label.props.x + 15,
+						y: label.props.y + 15,
+						style: { pointerEvents: 'none' },
+					})
+				)}
+
+				{/* Thumb - interactive */}
+				<circle
+					cx={thumbX + 15}
+					cy={thumbY + 15}
+					r="8" // Slightly larger for easier clicking
+					fill="#0066ff"
+					stroke="white"
+					strokeWidth="2"
+					style={{
+						pointerEvents: 'all',
+						cursor: isDragging ? 'grabbing' : 'grab',
+					}}
+					onMouseDown={handleMouseDown}
+				/>
+			</svg>
+		</div>
+	)
 }
 
 /**
@@ -66,18 +267,20 @@ export const MajorChordSliderNodeType = T.object({
 	type: T.literal('majorChordSlider'),
 	value: T.number.optional(), // Made optional for backwards compatibility
 	stepIndex: T.number.optional(), // Legacy property for backwards compatibility
+	keyIndex: T.number.optional(), // Index into KEY_DEFINITIONS array
 })
 
 export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 	type: 'majorChordSlider',
 	validator: MajorChordSliderNodeType,
-	title: 'B Major Slider',
+	title: 'Major Scale Slider',
 	icon: <MajorChordIcon />,
 	getDefault: () => ({
 		type: 'majorChordSlider',
-		value: 493.88, // Start with B4
+		value: 261.63, // Start with C4
+		keyIndex: 0, // Start with C major
 	}),
-	getBodyHeightPx: () => NODE_ROW_HEIGHT_PX,
+	getBodyHeightPx: () => NODE_ROW_HEIGHT_PX + 130, // Circular slider with proper spacing
 	getPorts: () => ({
 		output: outputPort,
 	}),
@@ -86,8 +289,10 @@ export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 	}),
 	Component: ({ shape, node }) => {
 		const editor = useEditor()
-		const currentValue = node.value ?? 493.88
-		const noteName = getNoteName(currentValue)
+		const currentKeyIndex = node.keyIndex ?? 0
+		const currentValue = node.value ?? KEY_DEFINITIONS[currentKeyIndex].rootFreq
+		const currentKey = KEY_DEFINITIONS[currentKeyIndex]
+		const noteName = getNoteName(currentValue, currentKeyIndex)
 
 		return (
 			<>
@@ -105,14 +310,66 @@ export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 				>
 					{noteName}
 				</div>
+
+				{/* Circular key selector */}
+				<div
+					style={{
+						padding: '10px',
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						width: '100%',
+						position: 'relative',
+						zIndex: 5,
+						pointerEvents: 'none',
+					}}
+				>
+					<div
+						style={{
+							fontSize: '12px',
+							marginBottom: '8px',
+							color: '#666',
+							fontWeight: '500',
+						}}
+					>
+						Key: {currentKey.key}
+					</div>
+					<CircularSlider
+						value={currentKeyIndex}
+						onValueChange={(keyIndex) => {
+							// When changing key, snap current value to the new key's scale
+							const snappedValue = snapToMajorScale(currentValue, keyIndex)
+
+							editor.setSelectedShapes([shape.id])
+							updateNode<MajorChordSliderNode>(editor, shape, (node) => ({
+								...node,
+								keyIndex: keyIndex,
+								value: snappedValue,
+							}))
+						}}
+						size={80}
+					/>
+				</div>
+
+				{/* Separator */}
+				<div
+					style={{
+						height: '1px',
+						backgroundColor: '#eee',
+						margin: '8px 16px',
+						width: 'calc(100% - 32px)',
+					}}
+				/>
+
+				{/* Note selector slider */}
 				<NodeRow className="SliderNode" onPointerDown={stopEventPropagation}>
 					<TldrawUiSlider
 						steps={2000}
 						value={currentValue}
-						label="B Major"
-						title="B Major Scale"
+						label={`${currentKey.key} Major`}
+						title={`${currentKey.key} Major Scale`}
 						onValueChange={(value) => {
-							const snapped = snapToBMajorScale(value)
+							const snapped = snapToMajorScale(value, currentKeyIndex)
 							editor.setSelectedShapes([shape.id])
 							updateNode<MajorChordSliderNode>(editor, shape, (node) => ({
 								...node,
