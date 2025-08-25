@@ -204,7 +204,7 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 				display: 'flex',
 				justifyContent: 'center',
 				alignItems: 'center',
-				height: size + 40,
+				height: size + 30,
 				position: 'relative',
 				zIndex: 10,
 				pointerEvents: 'all',
@@ -379,7 +379,7 @@ export const MajorChordSliderNodeType = T.object({
 export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 	type: 'majorChordSlider',
 	validator: MajorChordSliderNodeType,
-	title: 'Major Scale Slider',
+	title: 'Major Scale',
 	icon: <CircleSliderIcon />,
 	getDefault: () => ({
 		type: 'majorChordSlider',

@@ -25,7 +25,7 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 	type: 'orchestrator',
 	validator: OrchestratorNodeValidator,
 	title: 'Orchestrator',
-	heading: 'Orchestrator',
+	heading: 'Sequencer',
 	icon: <PlayIcon />,
 	getDefault: () => ({
 		type: 'orchestrator',
