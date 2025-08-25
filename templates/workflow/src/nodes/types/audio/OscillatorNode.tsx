@@ -1,6 +1,10 @@
 import React from 'react'
 import { T, useEditor, useValue } from 'tldraw'
 import { OscillatorIcon } from '../../../components/icons/OscillatorIcon'
+import { SawtoothWaveIcon } from '../../../components/icons/SawtoothWaveIcon'
+import { SineWaveIcon } from '../../../components/icons/SineWaveIcon'
+import { SquareWaveIcon } from '../../../components/icons/SquareWaveIcon'
+import { TriangleWaveIcon } from '../../../components/icons/TriangleWaveIcon'
 import { NODE_HEADER_HEIGHT_PX, NODE_ROW_HEIGHT_PX } from '../../../constants'
 import { getNodeInputPortValues } from '../../nodePorts'
 import { NodeDefinition, NodeInputRow, NodeRow, updateNode } from '../shared'
@@ -119,6 +123,21 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 			}))
 		}
 
+		const getWaveformIcon = (waveform: OscillatorNodeType['waveform']) => {
+			switch (waveform) {
+				case 'sine':
+					return <SineWaveIcon />
+				case 'square':
+					return <SquareWaveIcon />
+				case 'sawtooth':
+					return <SawtoothWaveIcon />
+				case 'triangle':
+					return <TriangleWaveIcon />
+				default:
+					return <SineWaveIcon />
+			}
+		}
+
 		return (
 			<>
 				<NodeInputRow
@@ -129,16 +148,41 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 				/>
 
 				<NodeRow className="NodeRow">
-					<select
-						value={node.waveform}
-						onChange={(e) => handleWaveformChange(e.target.value as OscillatorNodeType['waveform'])}
-						onPointerDown={(e) => e.stopPropagation()}
+					<div
+						style={{
+							display: 'flex',
+							gap: '2px',
+							width: '100%',
+						}}
 					>
-						<option value="sine">Sine</option>
-						<option value="square">Square</option>
-						<option value="sawtooth">Saw</option>
-						<option value="triangle">Triangle</option>
-					</select>
+						{(['sine', 'square', 'sawtooth', 'triangle'] as const).map((waveform) => (
+							<button
+								key={waveform}
+								onClick={() => handleWaveformChange(waveform)}
+								onPointerDown={(e) => {
+									e.stopPropagation()
+									e.preventDefault()
+								}}
+								style={{
+									flex: 1,
+									padding: '8px 4px',
+									backgroundColor: node.waveform === waveform ? '#37353E' : '#D3DAD9',
+									color: node.waveform === waveform ? '#D3DAD9' : '#37353E',
+									border: 'none',
+									borderRadius: '4px',
+									cursor: 'pointer',
+									position: 'relative',
+									zIndex: 1000,
+									pointerEvents: 'auto',
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'center',
+								}}
+							>
+								{getWaveformIcon(waveform)}
+							</button>
+						))}
+					</div>
 				</NodeRow>
 
 				<NodeRow className="NodeRow">
@@ -151,18 +195,22 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 						style={{
 							width: '100%',
 							padding: '8px',
-							backgroundColor: node.isPlaying ? '#ff6b6b' : '#4caf50',
+							backgroundColor: node.isPlaying ? '#C06767' : '#67C090',
 							color: 'white',
 							border: 'none',
-							borderRadius: '4px',
+							borderRadius: '8px',
 							cursor: 'pointer',
-							position: 'relative',
-							zIndex: 1000,
-							pointerEvents: 'auto',
+							fontSize: node.isPlaying ? '18px' : '16px',
+							fontWeight: '500',
 							display: 'flex',
 							alignItems: 'center',
 							justifyContent: 'center',
-							fontSize: '16px',
+							position: 'relative',
+							zIndex: 1000,
+							pointerEvents: 'auto',
+							boxShadow: node.isPlaying
+								? '0 2px 8px rgba(192, 103, 103, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.2)'
+								: '0 2px 8px rgba(103, 192, 144, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.2)',
 						}}
 					>
 						{node.isPlaying ? '⏹' : '▶'}
