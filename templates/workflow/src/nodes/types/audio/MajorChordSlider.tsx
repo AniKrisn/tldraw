@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react'
-import { stopEventPropagation, T, TldrawUiSlider, useEditor } from 'tldraw'
+import { stopEventPropagation, T, TldrawUiSlider, useEditor, useUniqueSafeId } from 'tldraw'
 import { CircleSliderIcon } from '../../../components/icons/CircleSliderIcon'
 import { NODE_ROW_HEIGHT_PX } from '../../../constants'
 import { NodeDefinition, NodeRow, outputPort, updateNode } from '../shared'
@@ -95,6 +95,10 @@ interface CircularSliderProps {
 const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, size = 60 }) => {
 	const [isDragging, setIsDragging] = useState(false)
 	const sliderRef = useRef<SVGSVGElement>(null)
+	const filterId = useUniqueSafeId()
+	const clipPathId = useUniqueSafeId()
+	const gradient1Id = useUniqueSafeId()
+	const gradient2Id = useUniqueSafeId()
 
 	const radius = (size - 20) / 2
 	const centerX = size / 2
@@ -230,18 +234,95 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 					onMouseDown={handleMouseDown}
 				/>
 
-				{/* Track circle - visible */}
-				<circle
-					cx={centerX + 15}
-					cy={centerY + 15}
-					r={radius}
-					fill="none"
-					stroke="#ddd"
-					strokeWidth="3"
-					style={{
-						pointerEvents: 'none', // Let the invisible hitbox handle events
-					}}
-				/>
+				{/* CircleSlider.svg in center - full complex version */}
+				<g
+					transform={`translate(${centerX + 15 - 38}, ${centerY + 15 - 32.5}) scale(1.3) rotate(${angleFromValue(value) + 90}, 29, 25)`}
+					style={{ pointerEvents: 'none' }}
+				>
+					<defs>
+						<filter
+							id={filterId}
+							x="0.25"
+							y="-3.75"
+							width="57.5"
+							height="60.8"
+							filterUnits="userSpaceOnUse"
+							colorInterpolationFilters="sRGB"
+						>
+							<feFlood floodOpacity="0" result="BackgroundImageFix" />
+							<feColorMatrix
+								in="SourceAlpha"
+								type="matrix"
+								values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+								result="hardAlpha"
+							/>
+							<feOffset dy="4" />
+							<feGaussianBlur stdDeviation="2.65" />
+							<feComposite in2="hardAlpha" operator="out" />
+							<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0" />
+							<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_29_75" />
+							<feBlend
+								mode="normal"
+								in="SourceGraphic"
+								in2="effect1_dropShadow_29_75"
+								result="shape"
+							/>
+						</filter>
+						<clipPath id={clipPathId}>
+							<circle cx="29" cy="25" r="20" transform="translate(-0.25 3.75)" />
+						</clipPath>
+						<linearGradient
+							id={gradient1Id}
+							x1="29"
+							y1="5"
+							x2="29"
+							y2="45"
+							gradientUnits="userSpaceOnUse"
+						>
+							<stop stopColor="#3C444F" />
+							<stop offset="1" stopColor="#1B1F25" />
+						</linearGradient>
+						<linearGradient
+							id={gradient2Id}
+							x1="29"
+							y1="5"
+							x2="29"
+							y2="23.7826"
+							gradientUnits="userSpaceOnUse"
+						>
+							<stop stopColor="#1F2937" />
+							<stop offset="0.278846" stopColor="#6C6B6B" />
+							<stop offset="1" stopColor="#151515" />
+						</linearGradient>
+					</defs>
+
+					{/* Backdrop blur effect */}
+					<foreignObject x="0.25" y="-3.75" width="57.5" height="60.8">
+						<div
+							style={{
+								backdropFilter: 'blur(1px)',
+								clipPath: `url(#${clipPathId})`,
+								height: '1%',
+								width: '1%',
+							}}
+						/>
+					</foreignObject>
+
+					{/* Main circle with drop shadow */}
+					<g filter={`url(#${filterId})`}>
+						<circle cx="29" cy="25" r="20" fill="#171717" />
+						<circle cx="29" cy="25" r="21.375" stroke={`url(#${gradient1Id})`} strokeWidth="2.75" />
+					</g>
+
+					{/* Inner circle */}
+					<circle cx="29" cy="25" r="20.75" fill="#171717" stroke="#1F2937" strokeWidth="1.5" />
+
+					{/* Indicator/needle */}
+					<path
+						d="M30.0137 23C30.2844 23 30.506 22.7845 30.5135 22.5139L30.9857 5.51388C30.9935 5.23241 30.7675 5 30.4859 5H27.5141C27.2325 5 27.0065 5.23241 27.0143 5.51388L27.4865 22.5139C27.494 22.7845 27.7156 23 27.9863 23H30.0137Z"
+						fill={`url(#${gradient2Id})`}
+					/>
+				</g>
 
 				{/* Key labels - non-interactive */}
 				{keyLabels.map((label, index) =>
@@ -266,7 +347,7 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 					onMouseDown={handleMouseDown}
 				/>
 
-				{/* Thumb - visible */}
+				{/* Thumb - visible
 				<circle
 					cx={thumbX + 15}
 					cy={thumbY + 15}
@@ -277,7 +358,7 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 					style={{
 						pointerEvents: 'none', // Let the invisible hitbox handle events
 					}}
-				/>
+				/> */}
 			</svg>
 		</div>
 	)
@@ -304,7 +385,7 @@ export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 		value: 261.63, // Start with C4
 		keyIndex: 0, // Start with C major
 	}),
-	getBodyHeightPx: () => NODE_ROW_HEIGHT_PX + 130, // Circular slider with proper spacing
+	getBodyHeightPx: () => NODE_ROW_HEIGHT_PX + 139, // Circular slider with tighter spacing
 	getPorts: () => ({
 		output: outputPort,
 	}),
@@ -338,7 +419,7 @@ export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 				{/* Circular key selector */}
 				<div
 					style={{
-						padding: '10px',
+						padding: '5px',
 						display: 'flex',
 						flexDirection: 'column',
 						alignItems: 'center',
@@ -351,7 +432,7 @@ export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 					<div
 						style={{
 							fontSize: '12px',
-							marginBottom: '8px',
+							marginBottom: '4px',
 							color: '#666',
 							fontWeight: '500',
 						}}
@@ -374,16 +455,6 @@ export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 						size={80}
 					/>
 				</div>
-
-				{/* Separator */}
-				<div
-					style={{
-						height: '1px',
-						backgroundColor: '#eee',
-						margin: '8px 16px',
-						width: 'calc(100% - 32px)',
-					}}
-				/>
 
 				{/* Note selector slider */}
 				<NodeRow className="SliderNode" onPointerDown={stopEventPropagation}>
