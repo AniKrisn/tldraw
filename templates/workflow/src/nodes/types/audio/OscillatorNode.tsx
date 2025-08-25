@@ -18,7 +18,7 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 	type: 'oscillator',
 	validator: OscillatorNodeValidator,
 	title: 'Oscillator',
-	heading: '🎵 OSC',
+	heading: 'Oscillator',
 	icon: <OscillatorIcon />,
 	getDefault: () => ({
 		type: 'oscillator',
@@ -30,12 +30,12 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 	getBodyHeightPx: () => NODE_ROW_HEIGHT_PX * 3,
 
 	getPorts: () => ({
-		// audioOut: {
-		// 	id: 'audioOut',
-		// 	x: 250,
-		// 	y: NODE_HEADER_HEIGHT_PX / 2,
-		// 	terminal: 'start',
-		// },
+		output: {
+			id: 'output',
+			x: 235,
+			y: NODE_HEADER_HEIGHT_PX / 2,
+			terminal: 'start',
+		},
 		freqIn: {
 			id: 'freqIn',
 			x: 0,
@@ -45,7 +45,7 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 	}),
 
 	computeOutput: (node, inputs) => ({
-		audioOut: node.isPlaying ? 1 : 0,
+		output: node.isPlaying ? 1 : 0,
 		frequency: inputs.freqIn ?? node.frequency,
 	}),
 
@@ -64,7 +64,6 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 		// Update oscillator when the effective frequency changes and it's playing
 		React.useEffect(() => {
 			if (node.isPlaying) {
-				console.log('🎵 Effective frequency changed to:', effectiveFrequency)
 				updateOscillatorParams(shape.id, { frequency: effectiveFrequency as number })
 			}
 		}, [effectiveFrequency, node.isPlaying, shape.id])
@@ -72,16 +71,24 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 		// Update oscillator when waveform changes and it's playing
 		React.useEffect(() => {
 			if (node.isPlaying) {
-				console.log('🎵 Waveform changed to:', node.waveform)
 				updateOscillatorParams(shape.id, { waveform: node.waveform })
 			}
 		}, [node.waveform, node.isPlaying, shape.id])
 
-		console.log('🎵 OscillatorNode component rendering, node:', node)
+		// React to changes in isPlaying state (including external changes from orchestrator)
+		React.useEffect(() => {
+			if (node.isPlaying) {
+				const nodeDataWithEffectiveFreq = {
+					...node,
+					frequency: effectiveFrequency as number,
+				}
+				startOscillator(shape.id, nodeDataWithEffectiveFreq)
+			} else {
+				stopOscillator(shape.id)
+			}
+		}, [node.isPlaying, shape.id, effectiveFrequency, node.waveform])
 
 		const handleFrequencyChange = (newFrequency: number) => {
-			console.log('🎵 handleFrequencyChange called with:', newFrequency)
-
 			const clampedFreq = Math.max(20, Math.min(20000, newFrequency))
 
 			updateNode<OscillatorNodeType>(editor, shape, (prevNode) => ({
@@ -102,32 +109,15 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 			}
 		}
 
-		const handlePlayToggle = async () => {
-			console.log('🎵 Play button clicked, current playing state:', node.isPlaying)
+		const handlePlayToggle = () => {
 			const newPlaying = !node.isPlaying
 
+			// Just update the state - the useEffect will handle starting/stopping audio
 			updateNode<OscillatorNodeType>(editor, shape, (prevNode) => ({
 				...prevNode,
 				isPlaying: newPlaying,
 			}))
-
-			console.log('🎵 Setting playing state to:', newPlaying)
-
-			if (newPlaying) {
-				console.log('🎵 Starting oscillator...')
-				// Use the effective frequency (from input or node) when starting
-				const nodeDataWithEffectiveFreq = {
-					...node,
-					frequency: effectiveFrequency as number,
-				}
-				await startOscillator(shape.id, nodeDataWithEffectiveFreq)
-			} else {
-				console.log('🎵 Stopping oscillator...')
-				stopOscillator(shape.id)
-			}
 		}
-
-		console.log('🎵 About to render button, isPlaying:', node.isPlaying)
 
 		return (
 			<>
@@ -155,12 +145,6 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 					<button
 						onClick={handlePlayToggle}
 						onPointerDown={(e) => {
-							console.log('🎵 onPointerDown fired!')
-							e.stopPropagation()
-							e.preventDefault()
-						}}
-						onMouseDown={(e) => {
-							console.log('🎵 onMouseDown fired!')
 							e.stopPropagation()
 							e.preventDefault()
 						}}
@@ -194,37 +178,26 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 const oscillators: Map<string, OscillatorNode> = new Map()
 
 async function startOscillator(nodeId: string, nodeData: OscillatorNodeType) {
-	console.log('🎵 startOscillator called for node:', nodeId, 'with data:', nodeData)
-
 	const audioManager = AudioContextManager.getInstance()
 	const context = await audioManager.getContext()
-
-	console.log('🎵 Audio context state:', context.state)
 
 	// Stop any existing oscillator first
 	stopOscillator(nodeId)
 
 	// Create new oscillator
 	const oscillator = context.createOscillator()
-	console.log('🎵 Created oscillator:', oscillator)
 
 	// Set initial values
 	oscillator.frequency.setValueAtTime(nodeData.frequency, context.currentTime)
 	oscillator.type = nodeData.waveform
 
-	console.log(`🎵 Set frequency to ${nodeData.frequency}Hz, waveform to ${nodeData.waveform}`)
-
 	// Connect and start
 	oscillator.connect(context.destination)
 	oscillator.start()
 
-	console.log('🎵 Started oscillator')
-
 	// Store references
 	audioManager.registerNode(nodeId, oscillator)
 	oscillators.set(nodeId, oscillator)
-
-	console.log('🎵 Registered oscillator, total active oscillators:', oscillators.size)
 }
 
 function stopOscillator(nodeId: string) {
@@ -232,9 +205,8 @@ function stopOscillator(nodeId: string) {
 	if (oscillator) {
 		try {
 			oscillator.stop()
-			console.log('🎵 Stopped oscillator for node:', nodeId)
 		} catch (e) {
-			console.log('🎵 Oscillator already stopped:', e)
+			// Oscillator already stopped
 		}
 		oscillators.delete(nodeId)
 	}
@@ -246,11 +218,8 @@ async function updateOscillatorParams(
 	nodeId: string,
 	params: Partial<{ frequency: number; waveform: OscillatorNodeType['waveform'] }>
 ) {
-	console.log('🎵 updateOscillatorParams called:', nodeId, params)
-
 	const oscillator = oscillators.get(nodeId)
 	if (!oscillator) {
-		console.log('🎵 No oscillator found for node:', nodeId)
 		return
 	}
 
@@ -259,23 +228,19 @@ async function updateOscillatorParams(
 
 	// Update frequency in real-time
 	if (params.frequency !== undefined) {
-		console.log('🎵 Updating frequency from', oscillator.frequency.value, 'to:', params.frequency)
 		try {
 			oscillator.frequency.setValueAtTime(params.frequency, context.currentTime)
-			console.log('🎵 Frequency updated successfully')
 		} catch (error) {
-			console.error('🎵 Error updating frequency:', error)
+			// Error updating frequency
 		}
 	}
 
 	// For waveform changes, we need to restart the oscillator
 	if (params.waveform !== undefined) {
-		console.log('🎵 Waveform change requires restart')
 		try {
 			oscillator.type = params.waveform
-			console.log('🎵 Waveform updated successfully to:', params.waveform)
 		} catch (error) {
-			console.error('🎵 Error updating waveform:', error)
+			// Error updating waveform
 		}
 	}
 }

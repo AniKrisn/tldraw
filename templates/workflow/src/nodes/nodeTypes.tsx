@@ -8,6 +8,7 @@ import { PortId, ShapePort } from '../ports/Port'
 import { NodeShape } from './NodeShapeUtil'
 import { AddNode } from './types/AddNode'
 import { MajorChordSliderNode } from './types/audio/MajorChordSlider'
+import { OrchestratorNode } from './types/audio/OrchestratorNode'
 import { OscillatorNode } from './types/audio/OscillatorNode'
 import { ConditionalNode } from './types/ConditionalNode'
 import { DivideNode } from './types/DivideNode'
@@ -26,6 +27,7 @@ export const NodeDefinitions = [
 	SliderNode,
 	// Audio Nodes
 	OscillatorNode,
+	OrchestratorNode,
 	MajorChordSliderNode,
 ] as const
 
