@@ -175,7 +175,10 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 									padding: '8px 4px',
 									backgroundColor: node.waveform === waveform ? '#37353E' : '#D3DAD9',
 									color: node.waveform === waveform ? '#D3DAD9' : '#37353E',
-									border: 'none',
+									border:
+										node.waveform === waveform
+											? '1px solid rgba(211, 218, 217, 0.3)'
+											: '1px solid rgba(55, 53, 62, 0.2)',
 									borderRadius: '4px',
 									cursor: 'pointer',
 									position: 'relative',
@@ -204,10 +207,12 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 							padding: '8px',
 							backgroundColor: node.isPlaying ? '#C06767' : '#67C090',
 							color: 'white',
-							border: 'none',
+							border: node.isPlaying
+								? '1px solid rgba(255, 255, 255, 0.2)'
+								: '1px solid rgba(255, 255, 255, 0.2)',
 							borderRadius: '8px',
 							cursor: 'pointer',
-							fontSize: node.isPlaying ? '18px' : '16px',
+							fontSize: '16px',
 							fontWeight: '500',
 							display: 'flex',
 							alignItems: 'center',

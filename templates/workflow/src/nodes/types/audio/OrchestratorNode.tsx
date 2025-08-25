@@ -284,7 +284,10 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 									padding: '6px 4px',
 									backgroundColor: (node.mode ?? 'chord') === mode ? '#37353E' : '#D3DAD9',
 									color: (node.mode ?? 'chord') === mode ? '#D3DAD9' : '#37353E',
-									border: 'none',
+									border:
+										(node.mode ?? 'chord') === mode
+											? '1px solid rgba(211, 218, 217, 0.3)'
+											: '1px solid rgba(55, 53, 62, 0.2)',
 									borderRadius: '4px',
 									cursor: 'pointer',
 									fontSize: '12px',
@@ -311,7 +314,9 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 							flex: 1,
 							backgroundColor: node.isPlaying ? '#C06767' : '#67C090',
 							color: 'white',
-							border: 'none',
+							border: node.isPlaying
+								? '1px solid rgba(255, 255, 255, 0.2)'
+								: '1px solid rgba(255, 255, 255, 0.2)',
 							borderRadius: '8px',
 							cursor: 'pointer',
 							fontSize: node.isPlaying ? '18px' : '16px',
