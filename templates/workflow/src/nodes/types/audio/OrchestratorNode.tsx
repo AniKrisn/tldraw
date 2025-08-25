@@ -8,12 +8,16 @@ import { getNodePortConnections } from '../../nodePorts'
 import { NodeShape } from '../../NodeShapeUtil'
 import { NodeDefinition, updateNode } from '../shared'
 
+// Configurable speed for arp mode (in milliseconds)
+const DEFAULT_ARP_SPEED = 250
+
 export type OrchestratorNodeType = T.TypeOf<typeof OrchestratorNodeValidator>
 export const OrchestratorNodeValidator = T.object({
 	type: T.literal('orchestrator'),
 	numInputs: T.number.optional(),
 	isPlaying: T.boolean,
 	mode: T.literalEnum('chord', 'arp', 'random').optional(),
+	speed: T.number.optional(), // Speed in milliseconds for arp/random modes
 	inputs: T.any.optional(),
 })
 
@@ -28,6 +32,7 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 		numInputs: 4,
 		isPlaying: false,
 		mode: 'chord' as const,
+		speed: DEFAULT_ARP_SPEED,
 	}),
 
 	getBodyHeightPx: (node) => {
@@ -59,20 +64,25 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 			'connected-oscillators',
 			() => {
 				const connections = getNodePortConnections(editor, shape.id)
-				const oscillatorShapes: NodeShape[] = []
+				const oscillatorShapes: { shape: NodeShape; inputIndex: number }[] = []
 
 				for (const connection of connections) {
 					if (connection.ownPortId.startsWith('input_')) {
 						const connectedShape = editor.getShape(connection.connectedShapeId)
 						if (connectedShape && editor.isShapeOfType<NodeShape>(connectedShape, 'node')) {
 							if (connectedShape.props.node.type === 'oscillator') {
-								oscillatorShapes.push(connectedShape)
+								// Extract input index from port ID (e.g., "input_0" -> 0)
+								const inputIndex = parseInt(connection.ownPortId.split('_')[1], 10)
+								oscillatorShapes.push({ shape: connectedShape, inputIndex })
 							}
 						}
 					}
 				}
 
+				// Sort by input index to ensure correct order (input_0, input_1, input_2, input_3)
 				return oscillatorShapes
+					.sort((a, b) => a.inputIndex - b.inputIndex)
+					.map((item) => item.shape)
 			},
 			[editor, shape.id]
 		)
@@ -132,7 +142,7 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 					) {
 						clearActiveInterval()
 					}
-				}, 500)
+				}, node.speed ?? DEFAULT_ARP_SPEED)
 			} else if (mode === 'random') {
 				activeIntervalRef.current = setInterval(() => {
 					connectedOscillators.forEach((oscillatorShape) => {
@@ -165,7 +175,7 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 					) {
 						clearActiveInterval()
 					}
-				}, 300)
+				}, node.speed ?? DEFAULT_ARP_SPEED)
 			}
 		}
 
