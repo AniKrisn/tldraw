@@ -140,6 +140,13 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 
 		return (
 			<>
+				<style>
+					{`
+						.NodeInputRow input {
+							font-family: "Geist Mono", "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace !important;
+						}
+					`}
+				</style>
 				<NodeInputRow
 					shapeId={shape.id}
 					portId="freqIn"

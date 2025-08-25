@@ -188,9 +188,10 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 				y={labelY}
 				textAnchor="middle"
 				dominantBaseline="central"
-				fontSize="10"
-				fill={index === value ? '#0066ff' : '#666'}
-				fontWeight={index === value ? 'bold' : 'normal'}
+				fontSize="11"
+				fill={index === value ? '#37353E' : '#D3DAD9'}
+				fontWeight={index === value ? '600' : '500'}
+				fontFamily='"Geist Mono", "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace'
 			>
 				{keyDef.key}
 			</text>
@@ -203,7 +204,7 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 				display: 'flex',
 				justifyContent: 'center',
 				alignItems: 'center',
-				height: size + 30,
+				height: size + 40,
 				position: 'relative',
 				zIndex: 10,
 				pointerEvents: 'all',
@@ -385,7 +386,7 @@ export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 		value: 261.63, // Start with C4
 		keyIndex: 0, // Start with C major
 	}),
-	getBodyHeightPx: () => NODE_ROW_HEIGHT_PX + 120, // Circular slider with tighter spacing
+	getBodyHeightPx: () => NODE_ROW_HEIGHT_PX + 130, // Circular slider + styled note slider
 	getPorts: () => ({
 		output: outputPort,
 	}),
@@ -401,16 +402,28 @@ export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 
 		return (
 			<>
+				<style>
+					{`
+						.NodeShape-output {
+							font-family: "Geist Mono", "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace !important;
+						}
+					`}
+				</style>
 				{/* Note name overlay in header area */}
 				<div
 					style={{
 						position: 'absolute',
-						top: '13px',
-						right: '70px',
-						fontSize: '12px',
-						color: 'green',
+						top: '27px',
+						right: '9px',
+						fontSize: '14px',
+						fontFamily:
+							'"Geist Mono", "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace',
+						fontWeight: '500',
+						color: '#67C090',
 						pointerEvents: 'none',
 						zIndex: 1,
+						padding: '1px 4px',
+						borderRadius: '3px',
 					}}
 				>
 					{noteName}
@@ -442,27 +455,68 @@ export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 								value: snappedValue,
 							}))
 						}}
-						size={80}
+						size={90}
 					/>
 				</div>
 
 				{/* Note selector slider */}
 				<NodeRow className="SliderNode" onPointerDown={stopEventPropagation}>
-					<TldrawUiSlider
-						steps={2000}
-						value={currentValue}
-						label={`${currentKey.key} Major`}
-						title={`${currentKey.key} Major Scale`}
-						onValueChange={(value) => {
-							const snapped = snapToMajorScale(value, currentKeyIndex)
-							editor.setSelectedShapes([shape.id])
-							updateNode<MajorChordSliderNode>(editor, shape, (node) => ({
-								...node,
-								value: snapped,
-							}))
+					<div
+						style={{
+							display: 'flex',
+							flexDirection: 'column',
+							gap: '2px',
+							width: '100%',
 						}}
-						onHistoryMark={() => {}}
-					/>
+					>
+						{/* Custom styled slider */}
+						<div
+							style={{
+								position: 'relative',
+								width: '100%',
+								height: '40px',
+								display: 'flex',
+								alignItems: 'center',
+							}}
+						>
+							<style>
+								{`
+									.SliderNode .tlui-slider__track {
+										background-color: #D3DAD9 !important;
+										height: 4px !important;
+									}
+									.SliderNode .tlui-slider__range {
+										background-color: #37353E !important;
+									}
+									.SliderNode .tlui-slider__thumb {
+										background: #171717 !important;
+										border: 2px solid #37353E !important;
+										width: 16px !important;
+										height: 16px !important;
+										box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+									}
+									.SliderNode .tlui-slider__thumb:hover {
+										transform: scale(1.1) !important;
+									}
+								`}
+							</style>
+							<TldrawUiSlider
+								steps={2000}
+								value={currentValue}
+								label=""
+								title={`${currentKey.key} Major Scale`}
+								onValueChange={(value) => {
+									const snapped = snapToMajorScale(value, currentKeyIndex)
+									editor.setSelectedShapes([shape.id])
+									updateNode<MajorChordSliderNode>(editor, shape, (node) => ({
+										...node,
+										value: snapped,
+									}))
+								}}
+								onHistoryMark={() => {}}
+							/>
+						</div>
+					</div>
 				</NodeRow>
 			</>
 		)
