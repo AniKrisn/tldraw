@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react'
 import { stopEventPropagation, T, TldrawUiSlider, useEditor } from 'tldraw'
-import { MajorChordIcon } from '../../../components/icons/MajorChordIcon'
+import { CircleSliderIcon } from '../../../components/icons/CircleSliderIcon'
 import { NODE_ROW_HEIGHT_PX } from '../../../constants'
 import { NodeDefinition, NodeRow, outputPort, updateNode } from '../shared'
 
@@ -215,19 +215,32 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 					pointerEvents: 'none', // Disable events on the entire SVG
 				}}
 			>
-				{/* Track circle - interactive */}
+				{/* Track circle - invisible larger hitbox */}
+				<circle
+					cx={centerX + 15}
+					cy={centerY + 15}
+					r={radius}
+					fill="none"
+					stroke="transparent"
+					strokeWidth="100" // Large invisible hitbox
+					style={{
+						pointerEvents: 'all',
+						cursor: isDragging ? 'grabbing' : 'grab',
+					}}
+					onMouseDown={handleMouseDown}
+				/>
+
+				{/* Track circle - visible */}
 				<circle
 					cx={centerX + 15}
 					cy={centerY + 15}
 					r={radius}
 					fill="none"
 					stroke="#ddd"
-					strokeWidth="8" // Wider stroke for easier clicking
+					strokeWidth="3"
 					style={{
-						pointerEvents: 'all',
-						cursor: isDragging ? 'grabbing' : 'grab',
+						pointerEvents: 'none', // Let the invisible hitbox handle events
 					}}
-					onMouseDown={handleMouseDown}
 				/>
 
 				{/* Key labels - non-interactive */}
@@ -240,19 +253,30 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 					})
 				)}
 
-				{/* Thumb - interactive */}
+				{/* Thumb - invisible larger hitbox */}
 				<circle
 					cx={thumbX + 15}
 					cy={thumbY + 15}
-					r="8" // Slightly larger for easier clicking
-					fill="#0066ff"
-					stroke="white"
-					strokeWidth="2"
+					r="15" // Large invisible hitbox around thumb
+					fill="transparent"
 					style={{
 						pointerEvents: 'all',
 						cursor: isDragging ? 'grabbing' : 'grab',
 					}}
 					onMouseDown={handleMouseDown}
+				/>
+
+				{/* Thumb - visible */}
+				<circle
+					cx={thumbX + 15}
+					cy={thumbY + 15}
+					r="6"
+					fill="#0066ff"
+					stroke="white"
+					strokeWidth="2"
+					style={{
+						pointerEvents: 'none', // Let the invisible hitbox handle events
+					}}
 				/>
 			</svg>
 		</div>
@@ -274,7 +298,7 @@ export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 	type: 'majorChordSlider',
 	validator: MajorChordSliderNodeType,
 	title: 'Major Scale Slider',
-	icon: <MajorChordIcon />,
+	icon: <CircleSliderIcon />,
 	getDefault: () => ({
 		type: 'majorChordSlider',
 		value: 261.63, // Start with C4
