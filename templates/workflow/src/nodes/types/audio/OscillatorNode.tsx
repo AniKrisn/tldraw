@@ -178,7 +178,7 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 									border:
 										node.waveform === waveform
 											? '1px solid rgba(211, 218, 217, 0.3)'
-											: '1px solid rgba(55, 53, 62, 0.2)',
+											: '1px solid var(--tl-color-hint)',
 									borderRadius: '4px',
 									cursor: 'pointer',
 									position: 'relative',
