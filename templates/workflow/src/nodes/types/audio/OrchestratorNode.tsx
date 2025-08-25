@@ -32,7 +32,7 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 
 	getBodyHeightPx: (node) => {
 		const numInputs = node.numInputs ?? 4
-		return numInputs * 20 + 30
+		return numInputs * 20 + 0.5
 	},
 
 	getPorts: (node) => ({
@@ -271,13 +271,15 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 								}}
 								style={{
 									flex: 1,
-									padding: '2px 4px',
-									backgroundColor: (node.mode ?? 'chord') === mode ? '#333' : '#666',
-									color: 'white',
+									padding: '6px 4px',
+									backgroundColor: (node.mode ?? 'chord') === mode ? '#37353E' : '#D3DAD9',
+									color: (node.mode ?? 'chord') === mode ? '#D3DAD9' : '#37353E',
 									border: 'none',
-									borderRadius: '2px',
+									borderRadius: '4px',
 									cursor: 'pointer',
-									fontSize: '10px',
+									fontSize: '12px',
+									fontFamily: '"Geist Mono", monospace',
+									fontWeight: '500',
 									position: 'relative',
 									zIndex: 1000,
 									pointerEvents: 'auto',
@@ -297,18 +299,22 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 						}}
 						style={{
 							flex: 1,
-							backgroundColor: node.isPlaying ? '#ff6b6b' : '#4caf50',
+							backgroundColor: node.isPlaying ? '#C06767' : '#67C090',
 							color: 'white',
 							border: 'none',
-							borderRadius: '5px',
+							borderRadius: '8px',
 							cursor: 'pointer',
-							fontSize: '14px',
+							fontSize: node.isPlaying ? '18px' : '16px',
+							fontWeight: '500',
 							display: 'flex',
 							alignItems: 'center',
 							justifyContent: 'center',
 							position: 'relative',
 							zIndex: 1000,
 							pointerEvents: 'auto',
+							boxShadow: node.isPlaying
+								? '0 2px 8px rgba(192, 103, 103, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.2)'
+								: '0 2px 8px rgba(103, 192, 144, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.2)',
 						}}
 					>
 						{node.isPlaying ? '⏹' : '▶'}

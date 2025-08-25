@@ -385,7 +385,7 @@ export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 		value: 261.63, // Start with C4
 		keyIndex: 0, // Start with C major
 	}),
-	getBodyHeightPx: () => NODE_ROW_HEIGHT_PX + 139, // Circular slider with tighter spacing
+	getBodyHeightPx: () => NODE_ROW_HEIGHT_PX + 120, // Circular slider with tighter spacing
 	getPorts: () => ({
 		output: outputPort,
 	}),
@@ -429,16 +429,6 @@ export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 						pointerEvents: 'none',
 					}}
 				>
-					<div
-						style={{
-							fontSize: '12px',
-							marginBottom: '4px',
-							color: '#666',
-							fontWeight: '500',
-						}}
-					>
-						Key: {currentKey.key}
-					</div>
 					<CircularSlider
 						value={currentKeyIndex}
 						onValueChange={(keyIndex) => {
