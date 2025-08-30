@@ -1,8 +1,21 @@
-import React, { useCallback, useRef, useState } from 'react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { stopEventPropagation, T, TldrawUiSlider, useEditor, useUniqueSafeId } from 'tldraw'
 import { CircleSliderIcon } from '../../../components/icons/CircleSliderIcon'
 import { NODE_ROW_HEIGHT_PX } from '../../../constants'
 import { NodeDefinition, NodeRow, outputPort, updateNode } from '../shared'
+
+// Constants for better maintainability
+const SLIDER_CONSTANTS = {
+	KEYS_COUNT: 12,
+	ANGLE_PER_KEY: 30,
+	START_ANGLE: -90,
+	LABEL_OFFSET: 15,
+	THUMB_HITBOX_RADIUS: 15,
+	TRACK_HITBOX_WIDTH: 100,
+	MIN_FREQUENCY: 55,
+	MAX_FREQUENCY: 3520,
+	FREQUENCY_PRECISION: 2,
+} as const
 
 // Major scale intervals (all 7 notes)
 const MAJOR_SCALE_INTERVALS = [
@@ -31,8 +44,8 @@ const KEY_DEFINITIONS = [
 	{ key: 'B', rootFreq: 493.88, noteNames: ['B', 'C#', 'D#', 'E', 'F#', 'G#', 'A#'] },
 ] as const
 
-// Generate major scale frequencies for a given key across multiple octaves
-function generateMajorScaleFrequencies(keyIndex: number): { frequency: number; name: string }[] {
+// Utility functions
+const generateMajorScaleFrequencies = (keyIndex: number): { frequency: number; name: string }[] => {
 	const keyDef = KEY_DEFINITIONS[keyIndex]
 	const frequencies = []
 
@@ -46,9 +59,14 @@ function generateMajorScaleFrequencies(keyIndex: number): { frequency: number; n
 			const frequency = keyDef.rootFreq * octaveMultiplier * semitoneMultiplier
 
 			// Only include frequencies within reasonable range
-			if (frequency >= 55 && frequency <= 3520) {
+			if (
+				frequency >= SLIDER_CONSTANTS.MIN_FREQUENCY &&
+				frequency <= SLIDER_CONSTANTS.MAX_FREQUENCY
+			) {
 				frequencies.push({
-					frequency: Math.round(frequency * 100) / 100, // Round to 2 decimal places
+					frequency:
+						Math.round(frequency * Math.pow(10, SLIDER_CONSTANTS.FREQUENCY_PRECISION)) /
+						Math.pow(10, SLIDER_CONSTANTS.FREQUENCY_PRECISION),
 					name: `${keyDef.noteNames[i]}${4 + octave}`, // Standard note notation (e.g., B4, C#5)
 				})
 			}
@@ -61,16 +79,14 @@ function generateMajorScaleFrequencies(keyIndex: number): { frequency: number; n
 // Cache for scale frequencies by key
 const scaleFrequencyCache = new Map<number, { frequency: number; name: string }[]>()
 
-// Get scale frequencies for a key (with caching)
-function getScaleFrequencies(keyIndex: number): { frequency: number; name: string }[] {
+const getScaleFrequencies = (keyIndex: number): { frequency: number; name: string }[] => {
 	if (!scaleFrequencyCache.has(keyIndex)) {
 		scaleFrequencyCache.set(keyIndex, generateMajorScaleFrequencies(keyIndex))
 	}
 	return scaleFrequencyCache.get(keyIndex)!
 }
 
-// Find the closest major scale frequency to a given value for a specific key
-function snapToMajorScale(value: number, keyIndex: number): number {
+const snapToMajorScale = (value: number, keyIndex: number): number => {
 	const frequencies = getScaleFrequencies(keyIndex)
 	const closest = frequencies.reduce((prev, curr) =>
 		Math.abs(curr.frequency - value) < Math.abs(prev.frequency - value) ? curr : prev
@@ -78,11 +94,54 @@ function snapToMajorScale(value: number, keyIndex: number): number {
 	return closest.frequency
 }
 
-// Get the note name for a given frequency in a specific key
-function getNoteName(frequency: number, keyIndex: number): string {
+const getNoteName = (frequency: number, keyIndex: number): string => {
 	const frequencies = getScaleFrequencies(keyIndex)
 	const match = frequencies.find((f) => Math.abs(f.frequency - frequency) < 0.01)
 	return match ? match.name : '?'
+}
+
+// Hook for mouse drag handling
+const useMouseDrag = (
+	onValueChange: (value: number) => void,
+	getAngleFromEvent: (event: MouseEvent) => number
+) => {
+	const [isDragging, setIsDragging] = useState(false)
+
+	const valueFromAngle = useCallback((angle: number) => {
+		// Normalize angle to 0-360, starting from top
+		let normalizedAngle = (angle + 90) % 360
+		if (normalizedAngle < 0) normalizedAngle += 360
+		return (
+			Math.round(normalizedAngle / SLIDER_CONSTANTS.ANGLE_PER_KEY) % SLIDER_CONSTANTS.KEYS_COUNT
+		)
+	}, [])
+
+	const handleMouseMove = useCallback(
+		(event: MouseEvent) => {
+			if (!isDragging) return
+			const angle = getAngleFromEvent(event)
+			const newValue = valueFromAngle(angle)
+			onValueChange(newValue)
+		},
+		[isDragging, getAngleFromEvent, onValueChange, valueFromAngle]
+	)
+
+	const handleMouseUp = useCallback(() => {
+		setIsDragging(false)
+	}, [])
+
+	React.useEffect(() => {
+		if (isDragging) {
+			document.addEventListener('mousemove', handleMouseMove)
+			document.addEventListener('mouseup', handleMouseUp)
+			return () => {
+				document.removeEventListener('mousemove', handleMouseMove)
+				document.removeEventListener('mouseup', handleMouseUp)
+			}
+		}
+	}, [isDragging, handleMouseMove, handleMouseUp])
+
+	return { isDragging, setIsDragging, valueFromAngle }
 }
 
 // Circular Slider Component for Key Selection
@@ -93,7 +152,6 @@ interface CircularSliderProps {
 }
 
 const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, size = 60 }) => {
-	const [isDragging, setIsDragging] = useState(false)
 	const sliderRef = useRef<SVGSVGElement>(null)
 	const filterId = useUniqueSafeId()
 	const clipPathId = useUniqueSafeId()
@@ -105,15 +163,10 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 	const centerY = size / 2
 
 	// Calculate angle from value (0-11 maps to 0-330 degrees, starting from top)
-	const angleFromValue = (val: number) => val * 30 - 90 // -90 to start from top
-
-	// Calculate value from angle
-	const valueFromAngle = (angle: number) => {
-		// Normalize angle to 0-360, starting from top
-		let normalizedAngle = (angle + 90) % 360
-		if (normalizedAngle < 0) normalizedAngle += 360
-		return Math.round(normalizedAngle / 30) % 12
-	}
+	const angleFromValue = useCallback(
+		(val: number) => val * SLIDER_CONSTANTS.ANGLE_PER_KEY + SLIDER_CONSTANTS.START_ANGLE,
+		[]
+	)
 
 	// Get angle from mouse position
 	const getAngleFromEvent = useCallback((event: React.MouseEvent | MouseEvent) => {
@@ -129,6 +182,11 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 		return Math.atan2(deltaY, deltaX) * (180 / Math.PI)
 	}, [])
 
+	const { isDragging, setIsDragging, valueFromAngle } = useMouseDrag(
+		onValueChange,
+		getAngleFromEvent
+	)
+
 	const handleMouseDown = useCallback(
 		(event: React.MouseEvent) => {
 			event.preventDefault()
@@ -139,64 +197,33 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 			const newValue = valueFromAngle(angle)
 			onValueChange(newValue)
 		},
-		[getAngleFromEvent, onValueChange, value]
+		[getAngleFromEvent, onValueChange, setIsDragging, valueFromAngle]
 	)
 
-	const handleMouseMove = useCallback(
-		(event: MouseEvent) => {
-			if (!isDragging) return
+	// Memoize key labels to prevent unnecessary re-renders
+	const keyLabels = useMemo(
+		() =>
+			KEY_DEFINITIONS.map((keyDef, index) => {
+				const labelAngle = angleFromValue(index)
+				const labelRadius = radius + SLIDER_CONSTANTS.LABEL_OFFSET
+				const labelX = centerX + labelRadius * Math.cos((labelAngle * Math.PI) / 180)
+				const labelY = centerY + labelRadius * Math.sin((labelAngle * Math.PI) / 180)
 
-			const angle = getAngleFromEvent(event)
-			const newValue = valueFromAngle(angle)
-			onValueChange(newValue)
-		},
-		[isDragging, getAngleFromEvent, onValueChange]
+				return {
+					key: index,
+					x: labelX + SLIDER_CONSTANTS.LABEL_OFFSET,
+					y: labelY + SLIDER_CONSTANTS.LABEL_OFFSET,
+					text: keyDef.key,
+					isSelected: index === value,
+				}
+			}),
+		[value, radius, centerX, centerY, angleFromValue]
 	)
-
-	const handleMouseUp = useCallback(() => {
-		setIsDragging(false)
-	}, [])
-
-	// Add/remove global mouse listeners
-	React.useEffect(() => {
-		if (isDragging) {
-			document.addEventListener('mousemove', handleMouseMove)
-			document.addEventListener('mouseup', handleMouseUp)
-			return () => {
-				document.removeEventListener('mousemove', handleMouseMove)
-				document.removeEventListener('mouseup', handleMouseUp)
-			}
-		}
-	}, [isDragging, handleMouseMove, handleMouseUp])
 
 	// Calculate thumb position
 	const angle = angleFromValue(value)
 	const thumbX = centerX + radius * Math.cos((angle * Math.PI) / 180)
 	const thumbY = centerY + radius * Math.sin((angle * Math.PI) / 180)
-
-	// Create key labels around the circle
-	const keyLabels = KEY_DEFINITIONS.map((keyDef, index) => {
-		const labelAngle = angleFromValue(index)
-		const labelRadius = radius + 15
-		const labelX = centerX + labelRadius * Math.cos((labelAngle * Math.PI) / 180)
-		const labelY = centerY + labelRadius * Math.sin((labelAngle * Math.PI) / 180)
-
-		return (
-			<text
-				key={index}
-				x={labelX}
-				y={labelY}
-				textAnchor="middle"
-				dominantBaseline="central"
-				fontSize="11"
-				fill={index === value ? '#37353E' : '#D3DAD9'}
-				fontWeight={index === value ? '600' : '500'}
-				fontFamily='"Geist Mono", "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace'
-			>
-				{keyDef.key}
-			</text>
-		)
-	})
 
 	return (
 		<div
@@ -217,17 +244,17 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 				style={{
 					zIndex: 10,
 					position: 'relative',
-					pointerEvents: 'none', // Disable events on the entire SVG
+					pointerEvents: 'none',
 				}}
 			>
 				{/* Track circle - invisible larger hitbox */}
 				<circle
-					cx={centerX + 15}
-					cy={centerY + 15}
+					cx={centerX + SLIDER_CONSTANTS.LABEL_OFFSET}
+					cy={centerY + SLIDER_CONSTANTS.LABEL_OFFSET}
 					r={radius}
 					fill="none"
 					stroke="transparent"
-					strokeWidth="100" // Large invisible hitbox
+					strokeWidth={SLIDER_CONSTANTS.TRACK_HITBOX_WIDTH}
 					style={{
 						pointerEvents: 'all',
 						cursor: isDragging ? 'grabbing' : 'grab',
@@ -237,7 +264,7 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 
 				{/* CircleSlider.svg in center - full complex version */}
 				<g
-					transform={`translate(${centerX + 15 - 38}, ${centerY + 15 - 32.5}) scale(1.3) rotate(${angleFromValue(value) + 90}, 29, 25)`}
+					transform={`translate(${centerX + SLIDER_CONSTANTS.LABEL_OFFSET - 38}, ${centerY + SLIDER_CONSTANTS.LABEL_OFFSET - 32.5}) scale(1.3) rotate(${angleFromValue(value) + 90}, 29, 25)`}
 					style={{ pointerEvents: 'none' }}
 				>
 					<defs>
@@ -325,21 +352,29 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 					/>
 				</g>
 
-				{/* Key labels - non-interactive */}
-				{keyLabels.map((label, index) =>
-					React.cloneElement(label, {
-						key: index,
-						x: label.props.x + 15,
-						y: label.props.y + 15,
-						style: { pointerEvents: 'none' },
-					})
-				)}
+				{/* Key labels */}
+				{keyLabels.map((label) => (
+					<text
+						key={label.key}
+						x={label.x}
+						y={label.y}
+						textAnchor="middle"
+						dominantBaseline="central"
+						fontSize="11"
+						fill={label.isSelected ? '#37353E' : '#D3DAD9'}
+						fontWeight={label.isSelected ? '600' : '500'}
+						fontFamily='"Geist Mono", "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace'
+						style={{ pointerEvents: 'none' }}
+					>
+						{label.text}
+					</text>
+				))}
 
 				{/* Thumb - invisible larger hitbox */}
 				<circle
-					cx={thumbX + 15}
-					cy={thumbY + 15}
-					r="15" // Large invisible hitbox around thumb
+					cx={thumbX + SLIDER_CONSTANTS.LABEL_OFFSET}
+					cy={thumbY + SLIDER_CONSTANTS.LABEL_OFFSET}
+					r={SLIDER_CONSTANTS.THUMB_HITBOX_RADIUS}
 					fill="transparent"
 					style={{
 						pointerEvents: 'all',
@@ -347,19 +382,6 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 					}}
 					onMouseDown={handleMouseDown}
 				/>
-
-				{/* Thumb - visible
-				<circle
-					cx={thumbX + 15}
-					cy={thumbY + 15}
-					r="6"
-					fill="#0066ff"
-					stroke="white"
-					strokeWidth="2"
-					style={{
-						pointerEvents: 'none', // Let the invisible hitbox handle events
-					}}
-				/> */}
 			</svg>
 		</div>
 	)
