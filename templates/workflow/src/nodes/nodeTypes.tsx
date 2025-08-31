@@ -10,6 +10,7 @@ import { AddNode } from './types/AddNode'
 import { MajorChordSliderNode } from './types/audio/MajorChordSlider'
 import { OrchestratorNode } from './types/audio/OrchestratorNode'
 import { OscillatorNode } from './types/audio/OscillatorNode'
+import { VCANode } from './types/audio/VCANode'
 import { ConditionalNode } from './types/ConditionalNode'
 import { DivideNode } from './types/DivideNode'
 import { MultiplyNode } from './types/MultiplyNode'
@@ -27,6 +28,7 @@ export const NodeDefinitions = [
 	SliderNode,
 	// Audio Nodes
 	OscillatorNode,
+	VCANode,
 	OrchestratorNode,
 	MajorChordSliderNode,
 ] as const

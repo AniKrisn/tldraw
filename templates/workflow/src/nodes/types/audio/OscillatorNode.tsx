@@ -258,8 +258,8 @@ async function startOscillator(nodeId: string, nodeData: OscillatorNodeType) {
 
 	// Set initial values
 	osc1.frequency.setValueAtTime(nodeData.frequency, context.currentTime) // Root
-	osc2.frequency.setValueAtTime(nodeData.frequency * 1.01, context.currentTime) // Slightly detuned
-	osc3.frequency.setValueAtTime(nodeData.frequency * 0.5, context.currentTime) // Sub-oscillator
+	osc2.frequency.setValueAtTime(nodeData.frequency * 1.0115, context.currentTime) // Slightly detuned
+	osc3.frequency.setValueAtTime(nodeData.frequency * 0.501, context.currentTime + 0.01) // Sub-oscillator
 
 	// Set waveforms for all oscillators
 	osc1.type = nodeData.waveform
