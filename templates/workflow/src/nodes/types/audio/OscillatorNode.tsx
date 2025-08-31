@@ -235,7 +235,14 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 
 // Audio management functions
 
-const oscillators: Map<string, OscillatorNode> = new Map()
+const oscillators: Map<
+	string,
+	{
+		oscillators: OscillatorNode[]
+		gains: GainNode[]
+		mixerGain: GainNode
+	}
+> = new Map()
 
 async function startOscillator(nodeId: string, nodeData: OscillatorNodeType) {
 	const audioManager = AudioContextManager.getInstance()
@@ -244,27 +251,57 @@ async function startOscillator(nodeId: string, nodeData: OscillatorNodeType) {
 	// Stop any existing oscillator first
 	stopOscillator(nodeId)
 
-	// Create new oscillator
-	const oscillator = context.createOscillator()
+	// Create three oscillators (like Moog Model 4)
+	const osc1 = context.createOscillator()
+	const osc2 = context.createOscillator()
+	const osc3 = context.createOscillator()
 
 	// Set initial values
-	oscillator.frequency.setValueAtTime(nodeData.frequency, context.currentTime)
-	oscillator.type = nodeData.waveform
+	osc1.frequency.setValueAtTime(nodeData.frequency, context.currentTime) // Root
+	osc2.frequency.setValueAtTime(nodeData.frequency * 1.01, context.currentTime) // Slightly detuned
+	osc3.frequency.setValueAtTime(nodeData.frequency * 0.5, context.currentTime) // Sub-oscillator
 
-	// Connect and start
-	oscillator.connect(context.destination)
-	oscillator.start()
+	// Set waveforms for all oscillators
+	osc1.type = nodeData.waveform
+	osc2.type = nodeData.waveform
+	osc3.type = nodeData.waveform
+
+	const osc1Gain = context.createGain()
+	const osc2Gain = context.createGain()
+	const osc3Gain = context.createGain()
+
+	osc1Gain.gain.value = 0.25
+	osc2Gain.gain.value = 0.3
+	osc3Gain.gain.value = 0.1
+
+	// mixer to combine oscillators
+	const mixerGain = context.createGain()
+
+	osc1.connect(osc1Gain).connect(mixerGain)
+	osc2.connect(osc2Gain).connect(mixerGain)
+	osc3.connect(osc3Gain).connect(mixerGain)
+	mixerGain.connect(context.destination)
+
+	osc1.start()
+	osc2.start()
+	osc3.start()
+
+	const nodes = {
+		oscillators: [osc1, osc2, osc3],
+		gains: [osc1Gain, osc2Gain, osc3Gain],
+		mixerGain,
+	}
 
 	// Store references
-	audioManager.registerNode(nodeId, oscillator)
-	oscillators.set(nodeId, oscillator)
+	audioManager.registerNode(nodeId, mixerGain)
+	oscillators.set(nodeId, nodes)
 }
 
 function stopOscillator(nodeId: string) {
-	const oscillator = oscillators.get(nodeId)
-	if (oscillator) {
+	const nodes = oscillators.get(nodeId)
+	if (nodes) {
 		try {
-			oscillator.stop()
+			nodes.oscillators.forEach((osc) => osc.stop())
 		} catch (e) {
 			// Oscillator already stopped
 		}
@@ -278,8 +315,8 @@ async function updateOscillatorParams(
 	nodeId: string,
 	params: Partial<{ frequency: number; waveform: OscillatorNodeType['waveform'] }>
 ) {
-	const oscillator = oscillators.get(nodeId)
-	if (!oscillator) {
+	const nodes = oscillators.get(nodeId)
+	if (!nodes) {
 		return
 	}
 
@@ -289,7 +326,9 @@ async function updateOscillatorParams(
 	// Update frequency in real-time
 	if (params.frequency !== undefined) {
 		try {
-			oscillator.frequency.setValueAtTime(params.frequency, context.currentTime)
+			nodes.oscillators[0].frequency.setValueAtTime(params.frequency, context.currentTime)
+			nodes.oscillators[1].frequency.setValueAtTime(params.frequency, context.currentTime)
+			nodes.oscillators[2].frequency.setValueAtTime(params.frequency, context.currentTime)
 		} catch (error) {
 			// Error updating frequency
 		}
@@ -297,8 +336,9 @@ async function updateOscillatorParams(
 
 	// For waveform changes, we need to restart the oscillator
 	if (params.waveform !== undefined) {
+		const waveform = params.waveform // we do this so that typescript knows this isn't undefined
 		try {
-			oscillator.type = params.waveform
+			nodes.oscillators.forEach((osc) => (osc.type = waveform))
 		} catch (error) {
 			// Error updating waveform
 		}
