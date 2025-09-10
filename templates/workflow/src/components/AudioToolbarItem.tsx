@@ -43,7 +43,6 @@ export function AudioToolbarItem() {
 			<TldrawUiPopoverContent side="right" align="center">
 				<TldrawUiToolbar label={labelStr} id={`${id}_audio`}>
 					<ToolbarItem tool="node-oscillator" />
-					<ToolbarItem tool="node-vca" />
 					<ToolbarItem tool="node-sequencer" />
 					<ToolbarItem tool="node-majorChordSlider" />
 					{/* We'll add more audio nodes here later */}
