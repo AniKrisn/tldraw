@@ -10,9 +10,9 @@ import { NodeDefinition, updateNode } from '../shared'
 
 const DEFAULT_ARP_SPEED = 250
 
-export type OrchestratorNodeType = T.TypeOf<typeof OrchestratorNodeValidator>
-export const OrchestratorNodeValidator = T.object({
-	type: T.literal('orchestrator'),
+export type SequencerNodeType = T.TypeOf<typeof SequencerNodeValidator>
+export const SequencerNodeValidator = T.object({
+	type: T.literal('sequencer'),
 	numInputs: T.number.optional(),
 	isPlaying: T.boolean,
 	mode: T.literalEnum('chord', 'arp', 'random').optional(),
@@ -20,14 +20,14 @@ export const OrchestratorNodeValidator = T.object({
 	inputs: T.any.optional(),
 })
 
-export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
-	type: 'orchestrator',
-	validator: OrchestratorNodeValidator,
-	title: 'Orchestrator',
-	heading: 'Orchestrator',
+export const SequencerNode: NodeDefinition<SequencerNodeType> = {
+	type: 'sequencer',
+	validator: SequencerNodeValidator,
+	title: 'Sequencer',
+	heading: 'Sequencer',
 	icon: <PlayIcon />,
 	getDefault: () => ({
-		type: 'orchestrator',
+		type: 'sequencer',
 		numInputs: 4,
 		isPlaying: false,
 		mode: 'chord' as const,
@@ -130,12 +130,12 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 
 					currentIndex = (currentIndex + 1) % connectedOscillators.length
 
-					const currentOrchestratorShape = editor.getShape(shape.id)
+					const currentSequencerShape = editor.getShape(shape.id)
 					if (
-						!currentOrchestratorShape ||
-						!editor.isShapeOfType<NodeShape>(currentOrchestratorShape, 'node') ||
-						currentOrchestratorShape.props.node.type !== 'orchestrator' ||
-						!(currentOrchestratorShape.props.node as OrchestratorNodeType).isPlaying
+						!currentSequencerShape ||
+						!editor.isShapeOfType<NodeShape>(currentSequencerShape, 'node') ||
+						currentSequencerShape.props.node.type !== 'sequencer' ||
+						!(currentSequencerShape.props.node as SequencerNodeType).isPlaying
 					) {
 						clearActiveInterval()
 					}
@@ -163,12 +163,12 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 						}
 					}
 
-					const currentOrchestratorShape = editor.getShape(shape.id)
+					const currentSequencerShape = editor.getShape(shape.id)
 					if (
-						!currentOrchestratorShape ||
-						!editor.isShapeOfType<NodeShape>(currentOrchestratorShape, 'node') ||
-						currentOrchestratorShape.props.node.type !== 'orchestrator' ||
-						!(currentOrchestratorShape.props.node as OrchestratorNodeType).isPlaying
+						!currentSequencerShape ||
+						!editor.isShapeOfType<NodeShape>(currentSequencerShape, 'node') ||
+						currentSequencerShape.props.node.type !== 'sequencer' ||
+						!(currentSequencerShape.props.node as SequencerNodeType).isPlaying
 					) {
 						clearActiveInterval()
 					}
@@ -192,7 +192,7 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 		const handleModeChange = (newMode: 'chord' | 'arp' | 'random') => {
 			const wasPlaying = node.isPlaying
 
-			updateNode<OrchestratorNodeType>(editor, shape, (prevNode) => ({
+			updateNode<SequencerNodeType>(editor, shape, (prevNode) => ({
 				...prevNode,
 				mode: newMode,
 			}))
@@ -207,7 +207,7 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 			const newPlaying = !node.isPlaying
 			const currentMode = node.mode ?? 'chord'
 
-			updateNode<OrchestratorNodeType>(editor, shape, (prevNode) => ({
+			updateNode<SequencerNodeType>(editor, shape, (prevNode) => ({
 				...prevNode,
 				isPlaying: newPlaying,
 			}))
