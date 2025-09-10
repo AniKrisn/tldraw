@@ -32,8 +32,7 @@ import {
 } from 'tldraw'
 import { NodeShape } from '../nodes/NodeShapeUtil'
 import { NodeDefinitions, NodeType } from '../nodes/nodeTypes'
-import { AudioToolbarItem } from './AudioToolbarItem'
-import { MATH_MENU_ID, MathematicalToolbarItem } from './MathematicalToolbarItem'
+import { AUDIO_MENU_ID } from './AudioMenu'
 
 function createNodeShape(editor: Editor, shapeId: TLShapeId, center: Vec, node: NodeType) {
 	// Mark a history stopping point for undo/redo
@@ -77,7 +76,6 @@ export const overrides: TLUiOverrides = {
 						editor.getViewportPageBounds().center,
 						nodeDef.getDefault()
 					)
-					tlmenus.deleteOpenMenu(MATH_MENU_ID, editor.contextId)
 				},
 				onDragStart: (_, info) => {
 					onDragFromToolbarToCreateShape(editor, info, {
@@ -89,7 +87,7 @@ export const overrides: TLUiOverrides = {
 							})
 						},
 						onDragEnd: () => {
-							tlmenus.deleteOpenMenu(MATH_MENU_ID, editor.contextId)
+							tlmenus.deleteOpenMenu(AUDIO_MENU_ID, editor.contextId)
 						},
 					})
 				},
@@ -110,13 +108,13 @@ export function WorkflowToolbar() {
 			</TldrawUiMenuGroup>
 
 			<TldrawUiMenuGroup id="nodes">
-				<MathematicalToolbarItem />
 				<ToolbarItem tool="node-slider" />
-				<ToolbarItem tool="node-conditional" />
 			</TldrawUiMenuGroup>
 
 			<TldrawUiMenuGroup id="audio">
-				<AudioToolbarItem />
+				<ToolbarItem tool="node-oscillator" />
+				<ToolbarItem tool="node-sequencer" />
+				<ToolbarItem tool="node-majorChordSlider" />
 			</TldrawUiMenuGroup>
 
 			<TldrawUiMenuGroup id="shapes">

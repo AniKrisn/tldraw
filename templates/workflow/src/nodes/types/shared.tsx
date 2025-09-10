@@ -10,8 +10,6 @@ import {
 	useEditor,
 	useValue,
 } from 'tldraw'
-import { AddIcon } from '../../components/icons/AddIcon'
-import { SubtractIcon } from '../../components/icons/SubtractIcon'
 import { NODE_HEADER_HEIGHT_PX, NODE_WIDTH_PX } from '../../constants'
 import { Port, PortId, ShapePort } from '../../ports/Port'
 import { getNodeInputPortValues } from '../nodePorts'
@@ -159,7 +157,7 @@ export function NodeInputRow({
 					onPointerDown={onPointerDown}
 					onClick={() => onSpinner(-1)}
 				>
-					<TldrawUiButtonIcon icon={<SubtractIcon />} />
+					<TldrawUiButtonIcon icon="minus" />
 				</TldrawUiButton>
 				<TldrawUiButton
 					title="increment"
@@ -167,7 +165,7 @@ export function NodeInputRow({
 					onPointerDown={onPointerDown}
 					onClick={() => onSpinner(1)}
 				>
-					<TldrawUiButtonIcon icon={<AddIcon />} />
+					<TldrawUiButtonIcon icon="plus" />
 				</TldrawUiButton>
 			</div>
 		</NodeRow>

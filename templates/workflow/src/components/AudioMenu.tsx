@@ -9,11 +9,11 @@ import {
 	useEditor,
 	useValue,
 } from 'tldraw'
-import { AudioIcon } from './icons/AudioIcon'
+import { AudioIcon } from './icons/AudioIcon.tsx'
 
 export const AUDIO_MENU_ID = 'toolbar audio'
 
-export function AudioToolbarItem() {
+export function AudioMenu() {
 	const id = 'audio'
 	const labelStr = 'Audio'
 	const editor = useEditor()
@@ -45,7 +45,6 @@ export function AudioToolbarItem() {
 					<ToolbarItem tool="node-oscillator" />
 					<ToolbarItem tool="node-sequencer" />
 					<ToolbarItem tool="node-majorChordSlider" />
-					{/* We'll add more audio nodes here later */}
 				</TldrawUiToolbar>
 			</TldrawUiPopoverContent>
 		</TldrawUiPopover>

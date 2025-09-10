@@ -17,12 +17,10 @@ import {
 import { ConnectionShape, getConnectionTerminals } from '../connection/ConnectionShapeUtil'
 import { NODE_WIDTH_PX } from '../constants'
 import { NodeType } from '../nodes/nodeTypes'
-import { AddNode } from '../nodes/types/AddNode'
-import { ConditionalNode } from '../nodes/types/ConditionalNode'
-import { DivideNode } from '../nodes/types/DivideNode'
-import { MultiplyNode } from '../nodes/types/MultiplyNode'
+import { MajorChordSliderNode } from '../nodes/types/audio/MajorChordSlider'
+import { OscillatorNode } from '../nodes/types/audio/OscillatorNode'
+import { SequencerNode } from '../nodes/types/audio/SequencerNode'
 import { NodeDefinition } from '../nodes/types/shared'
-import { SubtractNode } from '../nodes/types/SubtractNode'
 import { EditorAtom } from '../utils'
 
 export interface OnCanvasComponentPickerState {
@@ -49,14 +47,10 @@ export function OnCanvasComponentPicker() {
 
 	return (
 		<OnCanvasComponentPickerDialog onClose={onClose}>
-			<TldrawUiMenuGroup id="math">
-				<OnCanvasComponentPickerItem definition={AddNode} onClose={onClose} />
-				<OnCanvasComponentPickerItem definition={SubtractNode} onClose={onClose} />
-				<OnCanvasComponentPickerItem definition={MultiplyNode} onClose={onClose} />
-				<OnCanvasComponentPickerItem definition={DivideNode} onClose={onClose} />
-			</TldrawUiMenuGroup>
-			<TldrawUiMenuGroup id="logic">
-				<OnCanvasComponentPickerItem definition={ConditionalNode} onClose={onClose} />
+			<TldrawUiMenuGroup id="audio">
+				<OnCanvasComponentPickerItem definition={OscillatorNode} onClose={onClose} />
+				<OnCanvasComponentPickerItem definition={SequencerNode} onClose={onClose} />
+				<OnCanvasComponentPickerItem definition={MajorChordSliderNode} onClose={onClose} />
 			</TldrawUiMenuGroup>
 		</OnCanvasComponentPickerDialog>
 	)

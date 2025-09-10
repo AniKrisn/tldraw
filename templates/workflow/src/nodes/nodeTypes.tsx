@@ -6,24 +6,14 @@ import {
 } from '../constants'
 import { PortId, ShapePort } from '../ports/Port'
 import { NodeShape } from './NodeShapeUtil'
-import { AddNode } from './types/AddNode'
 import { MajorChordSliderNode } from './types/audio/MajorChordSlider'
 import { OscillatorNode } from './types/audio/OscillatorNode'
 import { SequencerNode } from './types/audio/SequencerNode'
-import { ConditionalNode } from './types/ConditionalNode'
-import { DivideNode } from './types/DivideNode'
-import { MultiplyNode } from './types/MultiplyNode'
 import { NodeDefinition, STOP_EXECUTION } from './types/shared'
 import { SliderNode } from './types/SliderNode'
-import { SubtractNode } from './types/SubtractNode'
 
 /** All our node types */
 export const NodeDefinitions = [
-	AddNode,
-	SubtractNode,
-	MultiplyNode,
-	DivideNode,
-	ConditionalNode,
 	SliderNode,
 	// Audio Nodes
 	OscillatorNode,

@@ -216,17 +216,6 @@ body {
 	}
 }
 
-.ConditionalNode-output {
-	justify-content: flex-end;
-}
-
-.ConditionalNode-output-false {
-	background: var(--tl-color-muted-0);
-	border-top: 1px solid var(--tl-color-divider);
-	margin-bottom: calc(-1 * var(--tl-space-3));
-	border-bottom-left-radius: var(--tl-radius-3);
-	border-bottom-right-radius: var(--tl-radius-3);
-}
 
 .NodeValue_placeholder {
 	display: inline-block;
