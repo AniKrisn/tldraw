@@ -8,7 +8,6 @@ import { getNodePortConnections } from '../../nodePorts'
 import { NodeShape } from '../../NodeShapeUtil'
 import { NodeDefinition, updateNode } from '../shared'
 
-// Configurable speed for arp mode (in milliseconds)
 const DEFAULT_ARP_SPEED = 250
 
 export type OrchestratorNodeType = T.TypeOf<typeof OrchestratorNodeValidator>
@@ -17,7 +16,7 @@ export const OrchestratorNodeValidator = T.object({
 	numInputs: T.number.optional(),
 	isPlaying: T.boolean,
 	mode: T.literalEnum('chord', 'arp', 'random').optional(),
-	speed: T.number.optional(), // Speed in milliseconds for arp/random modes
+	speed: T.number.optional(),
 	inputs: T.any.optional(),
 })
 
@@ -71,7 +70,6 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 						const connectedShape = editor.getShape(connection.connectedShapeId)
 						if (connectedShape && editor.isShapeOfType<NodeShape>(connectedShape, 'node')) {
 							if (connectedShape.props.node.type === 'oscillator') {
-								// Extract input index from port ID (e.g., "input_0" -> 0)
 								const inputIndex = parseInt(connection.ownPortId.split('_')[1], 10)
 								oscillatorShapes.push({ shape: connectedShape, inputIndex })
 							}
@@ -95,7 +93,6 @@ export const OrchestratorNode: NodeDefinition<OrchestratorNodeType> = {
 		}
 
 		const startModePlayback = (mode: 'chord' | 'arp' | 'random') => {
-			// Always clear any existing interval first
 			clearActiveInterval()
 
 			if (mode === 'chord') {

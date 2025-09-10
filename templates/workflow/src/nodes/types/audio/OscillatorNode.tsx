@@ -65,14 +65,14 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 		// Calculate the current effective frequency (from input or node property)
 		const effectiveFrequency = inputValues.freqIn ?? node.frequency
 
-		// Update oscillator when the effective frequency changes and it's playing
+		// Update oscillator when it's playing and the effective frequency changes
 		React.useEffect(() => {
 			if (node.isPlaying) {
 				updateOscillatorParams(shape.id, { frequency: effectiveFrequency as number })
 			}
 		}, [effectiveFrequency, node.isPlaying, shape.id])
 
-		// Update oscillator when waveform changes and it's playing
+		// Update oscillator when it's playing and the waveform changes
 		React.useEffect(() => {
 			if (node.isPlaying) {
 				updateOscillatorParams(shape.id, { waveform: node.waveform })
@@ -234,7 +234,6 @@ export const OscillatorNode: NodeDefinition<OscillatorNodeType> = {
 }
 
 // Audio management functions
-
 const oscillators: Map<
 	string,
 	{
@@ -245,70 +244,87 @@ const oscillators: Map<
 > = new Map()
 
 async function startOscillator(nodeId: string, nodeData: OscillatorNodeType) {
-	const audioManager = AudioContextManager.getInstance()
-	const context = await audioManager.getContext()
+	try {
+		const audioManager = AudioContextManager.getInstance()
+		const context = await audioManager.getContext()
 
-	// Stop any existing oscillator first
-	stopOscillator(nodeId)
+		// Stop any existing oscillator first
+		stopOscillator(nodeId)
 
-	// Create three oscillators (like Moog Model 4)
-	const osc1 = context.createOscillator()
-	const osc2 = context.createOscillator()
-	const osc3 = context.createOscillator()
+		// Create three oscillators (like Moog Model 4)
+		const osc1 = context.createOscillator()
+		const osc2 = context.createOscillator()
+		const osc3 = context.createOscillator()
 
-	// Set initial values
-	osc1.frequency.setValueAtTime(nodeData.frequency, context.currentTime) // Root
-	osc2.frequency.setValueAtTime(nodeData.frequency * 1.0115, context.currentTime) // Slightly detuned
-	osc3.frequency.setValueAtTime(nodeData.frequency * 0.501, context.currentTime + 0.01) // Sub-oscillator
+		// Set initial values
+		osc1.frequency.setValueAtTime(nodeData.frequency, context.currentTime) // Root
+		osc2.frequency.setValueAtTime(nodeData.frequency * 1.0115, context.currentTime) // Slightly detuned
+		osc3.frequency.setValueAtTime(nodeData.frequency * 0.501, context.currentTime + 0.01) // Sub-oscillator
 
-	// Set waveforms for all oscillators
-	osc1.type = nodeData.waveform
-	osc2.type = nodeData.waveform
-	osc3.type = nodeData.waveform
+		// Set waveforms for all oscillators
+		osc1.type = nodeData.waveform
+		osc2.type = nodeData.waveform
+		osc3.type = nodeData.waveform
 
-	const osc1Gain = context.createGain()
-	const osc2Gain = context.createGain()
-	const osc3Gain = context.createGain()
+		const osc1Gain = context.createGain()
+		const osc2Gain = context.createGain()
+		const osc3Gain = context.createGain()
 
-	osc1Gain.gain.value = 0.25
-	osc2Gain.gain.value = 0.3
-	osc3Gain.gain.value = 0.1
+		osc1Gain.gain.value = 0.25
+		osc2Gain.gain.value = 0.3
+		osc3Gain.gain.value = 0.1
 
-	// mixer to combine oscillators
-	const mixerGain = context.createGain()
+		// Mixer to combine oscillators
+		const mixerGain = context.createGain()
 
-	osc1.connect(osc1Gain).connect(mixerGain)
-	osc2.connect(osc2Gain).connect(mixerGain)
-	osc3.connect(osc3Gain).connect(mixerGain)
-	mixerGain.connect(context.destination)
+		osc1.connect(osc1Gain).connect(mixerGain)
+		osc2.connect(osc2Gain).connect(mixerGain)
+		osc3.connect(osc3Gain).connect(mixerGain)
+		mixerGain.connect(context.destination)
 
-	osc1.start()
-	osc2.start()
-	osc3.start()
+		osc1.start()
+		osc2.start()
+		osc3.start()
 
-	const nodes = {
-		oscillators: [osc1, osc2, osc3],
-		gains: [osc1Gain, osc2Gain, osc3Gain],
-		mixerGain,
+		const nodes = {
+			oscillators: [osc1, osc2, osc3],
+			gains: [osc1Gain, osc2Gain, osc3Gain],
+			mixerGain,
+		}
+
+		// Store references
+		audioManager.registerNode(nodeId, mixerGain)
+		oscillators.set(nodeId, nodes)
+	} catch (error) {
+		console.error(`Error starting oscillator for node ${nodeId}:`, error)
+		// Clean up any partial state
+		stopOscillator(nodeId)
 	}
-
-	// Store references
-	audioManager.registerNode(nodeId, mixerGain)
-	oscillators.set(nodeId, nodes)
 }
 
 function stopOscillator(nodeId: string) {
 	const nodes = oscillators.get(nodeId)
 	if (nodes) {
 		try {
-			nodes.oscillators.forEach((osc) => osc.stop())
+			nodes.oscillators.forEach((osc) => {
+				try {
+					osc.stop()
+				} catch (e) {
+					// Oscillator already stopped - this is expected in some cases
+					console.debug(`Oscillator ${nodeId} already stopped:`, e)
+				}
+			})
 		} catch (e) {
-			// Oscillator already stopped
+			console.error(`Error stopping oscillators for node ${nodeId}:`, e)
 		}
 		oscillators.delete(nodeId)
 	}
 
-	AudioContextManager.getInstance().unregisterNode(nodeId)
+	try {
+		AudioContextManager.getInstance().unregisterNode(nodeId)
+	} catch (e) {
+		console.error(`Error unregistering node ${nodeId}:`, e)
+	}
 }
 
 async function updateOscillatorParams(
@@ -327,10 +343,10 @@ async function updateOscillatorParams(
 	if (params.frequency !== undefined) {
 		try {
 			nodes.oscillators[0].frequency.setValueAtTime(params.frequency, context.currentTime)
-			nodes.oscillators[1].frequency.setValueAtTime(params.frequency, context.currentTime)
-			nodes.oscillators[2].frequency.setValueAtTime(params.frequency, context.currentTime)
+			nodes.oscillators[1].frequency.setValueAtTime(params.frequency * 1.0115, context.currentTime)
+			nodes.oscillators[2].frequency.setValueAtTime(params.frequency * 0.501, context.currentTime)
 		} catch (error) {
-			// Error updating frequency
+			console.error(`Error updating frequency for node ${nodeId}:`, error)
 		}
 	}
 
@@ -340,7 +356,7 @@ async function updateOscillatorParams(
 		try {
 			nodes.oscillators.forEach((osc) => (osc.type = waveform))
 		} catch (error) {
-			// Error updating waveform
+			console.error(`Error updating waveform for node ${nodeId}:`, error)
 		}
 	}
 }

@@ -4,7 +4,6 @@ import { CircleSliderIcon } from '../../../components/icons/CircleSliderIcon'
 import { NODE_ROW_HEIGHT_PX } from '../../../constants'
 import { NodeDefinition, NodeRow, outputPort, updateNode } from '../shared'
 
-// Constants for better maintainability
 const SLIDER_CONSTANTS = {
 	KEYS_COUNT: 12,
 	ANGLE_PER_KEY: 30,
@@ -370,7 +369,6 @@ const CircularSlider: React.FC<CircularSliderProps> = ({ value, onValueChange, s
 					</text>
 				))}
 
-				{/* Thumb - invisible larger hitbox */}
 				<circle
 					cx={thumbX + SLIDER_CONSTANTS.LABEL_OFFSET}
 					cy={thumbY + SLIDER_CONSTANTS.LABEL_OFFSET}
@@ -491,7 +489,6 @@ export const MajorChordSliderNode: NodeDefinition<MajorChordSliderNode> = {
 							width: '100%',
 						}}
 					>
-						{/* Custom styled slider */}
 						<div
 							style={{
 								position: 'relative',

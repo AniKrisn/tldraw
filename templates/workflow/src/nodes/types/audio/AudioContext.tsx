@@ -1,4 +1,4 @@
-// AudioContext manager - handles the shared Web Audio context
+// Entry-point for Web Audio API
 export class AudioContextManager {
 	private static instance: AudioContextManager | null = null
 	private context: AudioContext | null = null
